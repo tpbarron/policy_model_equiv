@@ -28,7 +28,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env-name', type=str, default='AcrobotContinuousVisionX-v0', help='Env to train.')
 parser.add_argument('--n-iter', type=int, default=250, help='Num iters')
 parser.add_argument('--max-episode-steps', type=int, default=1000, help='Max num ep steps')
-parser.add_argument('--max-replay-size', type=int, default=100000, help='Max num samples to store in replay memory')
 parser.add_argument('--render', action='store_true', help='Render env observations')
 parser.add_argument('--shared-actor-critic', action='store_true', help='Whether to share params between pol and val in network')
 
