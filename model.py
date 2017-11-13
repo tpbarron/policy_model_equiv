@@ -664,7 +664,7 @@ class MLPPolicy(torch.nn.Module):
 
 class MLPPolicySeparate(torch.nn.Module):
     def __init__(self, num_inputs, action_space, do_encode_mean=True):
-        super(MLPPolicy, self).__init__()
+        super(MLPPolicySeparate, self).__init__()
 
         self.obs_filter = ObsNorm((1, num_inputs), clip=5)
         self.action_space = action_space
@@ -694,7 +694,7 @@ class MLPPolicySeparate(torch.nn.Module):
         self.train()
 
     def cuda(self, **args):
-        super(MLPPolicy, self).cuda(**args)
+        super(MLPPolicySeparate, self).cuda(**args)
         self.obs_filter.cuda()
 
     def forward(self, inputs, encode_mean=False):

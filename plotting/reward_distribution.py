@@ -12,6 +12,7 @@ parser.add_argument('--load-path1', default='./trained_models/',
 parser.add_argument('--load-path2', default='./trained_models/',
                     help='directory to save agent logs (default: ./trained_models/)')
 parser.add_argument('--n', type=int, default=250000)
+parser.add_argument('--trials', type=int, default=1)
 parser.add_argument('--label1', type=str, default='label1')
 parser.add_argument('--label2', type=str, default='label2')
 parser.add_argument('--name', type=str, default='name')
@@ -21,7 +22,7 @@ args = parser.parse_args()
 # 50000 for walker
 # 8000 for acrobot
 #
-def smooth(x,window_len=500, window='hanning'):
+def smooth(x,window_len=50000, window='hanning'):
     """smooth the data using a window with requested size.
 
     This method is based on the convolution of a scaled window with the signal.
@@ -145,7 +146,7 @@ def plot(datas1, datas2):
     plt.legend()
     plt.tight_layout()
 
-    plt.show()
+    # plt.show()
     plt.savefig('plotting/'+args.name+'.pdf', format='pdf')
 
 if __name__ == '__main__':
@@ -153,12 +154,12 @@ if __name__ == '__main__':
     basically load several monitor files and plot mean, variance
     """
     data1 = []
-    for i in range(1, 10):
+    for i in range(1, 1+args.trials):
         datas1 = parse_file(os.path.join(args.load_path1, str(i)+'/0.monitor.json'))
         data1.append(datas1)
 
     data2 = []
-    for i in range(1, 10):
+    for i in range(1, 1+args.trials):
         datas2 = parse_file(os.path.join(args.load_path2, str(i)+'/0.monitor.json'))
         data2.append(datas2)
 

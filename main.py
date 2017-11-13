@@ -87,7 +87,7 @@ np.random.seed(args.seed)
 
 obs_shape = envs.observation_space.shape
 action_shape = 1
-enc_shape = (64,)
+enc_shape = (32,)
 
 # determine action shape
 is_continuous = None
