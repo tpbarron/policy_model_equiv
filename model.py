@@ -594,6 +594,76 @@ class LatentModel(torch.nn.Module):
 
 class MLPPolicy(torch.nn.Module):
     def __init__(self, num_inputs, action_space, do_encode_mean=True):
+        print ("Making shared MLP actor critic!")
+        super(MLPPolicy, self).__init__()
+
+        self.obs_filter = ObsNorm((1, num_inputs), clip=5)
+        self.action_space = action_space
+
+        self.fc1 = nn.Linear(num_inputs, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc_mean = nn.Linear(64, action_space.shape[0])
+        self.log_std = nn.Parameter(torch.zeros(1, action_space.shape[0]))
+        self.fc_val = nn.Linear(64, 1)
+        self.latent_model = LatentModel(64+action_space.shape[0], 64)
+
+        self.apply(weights_init_mlp)
+
+        tanh_gain = nn.init.calculate_gain('tanh')
+        self.fc_mean.weight.data.mul_(0.01)
+
+        self.train()
+
+    def cuda(self, **args):
+        super(MLPPolicy, self).cuda(**args)
+        self.obs_filter.cuda()
+
+    def forward(self, inputs, encode_mean=False):
+        self.obs_filter.update(inputs.data)
+        inputs.data = self.obs_filter(inputs.data)
+
+        x = F.tanh(self.fc1(inputs))
+        x = F.tanh(self.fc2(x))
+        enc = x
+        value = self.fc_val(x)
+        action_mean = self.fc_mean(x)
+        action_logstd = self.log_std.expand_as(action_mean)
+
+        return value, action_mean, action_logstd, enc
+
+    def act(self, inputs, deterministic=False, encode_mean=False):
+        value, action_mean, action_logstd, enc = self(inputs, encode_mean=encode_mean)
+        if deterministic:
+            return value, action_mean
+        action_std = action_logstd.exp()
+
+        noise = Variable(torch.randn(action_std.size()))
+        if action_std.is_cuda:
+            noise = noise.cuda()
+
+        action = action_mean + action_std * noise
+        # print ("Act: ", action.size(), enc.size())
+        mpred, rpred = self.latent_model(torch.cat((action, enc), dim=1))
+        return value, action, enc, mpred, rpred
+
+    def evaluate_actions(self, inputs, actions):
+        assert inputs.dim() == 2, "Expect to have inputs in num_processes * num_steps x ... format"
+
+        # print ("Inputs: ", inputs.size(), actions.size())
+
+        value, action_mean, action_logstd, enc = self(inputs)
+        mpred, rpred = self.latent_model(torch.cat((actions, enc), dim=1))
+        action_std = action_logstd.exp()
+
+        action_log_probs = -0.5 * ((actions - action_mean) / action_std).pow(2) - 0.5 * math.log(2 * math.pi) - action_logstd
+        action_log_probs = action_log_probs.sum(1, keepdim=True)
+        dist_entropy = 0.5 + math.log(2 * math.pi) + action_log_probs
+        dist_entropy = dist_entropy.sum(-1).mean()
+
+        return value, action_log_probs, dist_entropy, mpred, rpred
+
+class MLPPolicySeparate(torch.nn.Module):
+    def __init__(self, num_inputs, action_space, do_encode_mean=True):
         super(MLPPolicy, self).__init__()
 
         self.obs_filter = ObsNorm((1, num_inputs), clip=5)
@@ -626,21 +696,6 @@ class MLPPolicy(torch.nn.Module):
     def cuda(self, **args):
         super(MLPPolicy, self).cuda(**args)
         self.obs_filter.cuda()
-
-    # def encode(self, inputs):
-    #     # same without last layer
-    #     inputs.data = self.obs_filter(inputs.data)
-    #     x = self.v_fc1(inputs)
-    #     x = F.tanh(x)
-    #     x = self.v_fc2(x)
-    #     # # if self.do_encode_mean:
-    #     #     # normalize here
-    #     #     x.data = self.enc_filter(x.data)
-    #     #     # print ("ENCODING latent!")
-    #     # else:
-    #     #     print ("!!!! Not encoding mean !!!!")
-    #     # #     x = F.tanh(x)
-    #     return x
 
     def forward(self, inputs, encode_mean=False):
         self.obs_filter.update(inputs.data)
@@ -709,6 +764,8 @@ def make_actor_critic(observation_space, action_space, is_shared, is_continuous,
             else:
                 actor_critic = CNNContinuousPolicySeparate(observation_space, action_space)
         else:
-            # print (is_encode_mean)
-            actor_critic = MLPPolicy(observation_space[0], action_space, do_encode_mean=is_encode_mean)
+            if is_shared:
+                actor_critic = MLPPolicy(observation_space[0], action_space, do_encode_mean=is_encode_mean)
+            else:
+                actor_critic = MLPPolicySeparate(observation_space[0], action_space, do_encode_mean=is_encode_mean)
     return actor_critic

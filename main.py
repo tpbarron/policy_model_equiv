@@ -45,6 +45,8 @@ parser.add_argument('--batch-size', type=int, default=64, help='ppo batch size (
 parser.add_argument('--clip-param', type=float, default=0.2, help='ppo clip parameter (default: 0.2)')
 parser.add_argument('--entropy-coef', type=float, default=0.01, help='entropy term coefficient (default: 0.01)')
 parser.add_argument('--value-loss-coef', type=float, default=0.5, help='value loss coefficient (default: 0.5)')
+parser.add_argument('--model-loss-coef', type=float, default=0.5, help='model loss coefficient (default: 0.5)')
+
 parser.add_argument('--max-grad-norm', type=float, default=0.5, help='value loss coefficient (default: 0.5)')
 parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
 
@@ -85,7 +87,7 @@ np.random.seed(args.seed)
 
 obs_shape = envs.observation_space.shape
 action_shape = 1
-enc_shape = (32,)
+enc_shape = (64,)
 
 # determine action shape
 is_continuous = None
@@ -157,10 +159,13 @@ def ppo_update(num_updates, rollouts, final_rewards):
                 model_loss = (Variable(future_enc_batch) - model_preds).pow(2).mean() + (Variable(future_rew_batch) - rew_preds).pow(2).mean()
 
             optimizer.zero_grad()
+
+            value_loss_coef = args.value_loss_coef if args.shared_actor_critic else 1.0
+            model_loss_coef = args.model_loss_coef if args.shared_actor_critic else 1.0
             if args.model:
-                (model_loss + value_loss + action_loss - dist_entropy * args.entropy_coef).backward()
+                (model_loss_coef*model_loss + value_loss_coef*value_loss + action_loss - dist_entropy * args.entropy_coef).backward()
             else:
-                (value_loss + action_loss - dist_entropy * args.entropy_coef).backward()
+                (value_loss_coef*value_loss + action_loss - dist_entropy * args.entropy_coef).backward()
 
             optimizer.step()
 

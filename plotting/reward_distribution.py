@@ -21,7 +21,7 @@ args = parser.parse_args()
 # 50000 for walker
 # 8000 for acrobot
 #
-def smooth(x,window_len=50000, window='hanning'):
+def smooth(x,window_len=500, window='hanning'):
     """smooth the data using a window with requested size.
 
     This method is based on the convolution of a scaled window with the signal.
@@ -111,22 +111,17 @@ def plot(datas1, datas2):
 
     xs = np.arange(n)
     ylist = [make_y_given_cumsum(np.cumsum(data1[:,2]), data1[:,1], n) for data1 in datas1]
-    # print ([l.shape for l in ylist])
     ydata1 = np.stack(ylist)
-    # ydata1 = np.stack([data1[:,1] for data1 in datas1])
-    # print (ydata1.shape)
     ys1 = np.mean(ydata1, axis=0)
     ys1 = smooth(ys1)[:n]
     # ys1 = np.convolve(ys1, np.ones((S,))/S, mode='same')
-    ystd1 = np.std(ydata1, axis=0)
-    # print (ys1.shape)
-    # ys = datas[:,1]
-    ax = plt.gca()
-    std_down1 = ys1-ystd1
-    std_down1 = smooth(std_down1)[:n]
-    std_up1 = ys1+ystd1
-    std_up1 = smooth(std_up1)[:n]
-    ax.fill_between(xs, std_down1, std_up1, facecolor='blue', alpha=0.25)
+    # ystd1 = np.std(ydata1, axis=0)
+    # ax = plt.gca()
+    # std_down1 = ys1-ystd1
+    # std_down1 = smooth(std_down1)[:n]
+    # std_up1 = ys1+ystd1
+    # std_up1 = smooth(std_up1)[:n]
+    # ax.fill_between(xs, std_down1, std_up1, facecolor='blue', alpha=0.25)
     plt.plot(xs, ys1, color='blue', alpha=0.75, label=args.label1)
 
     xs2 = np.arange(n)
@@ -134,15 +129,16 @@ def plot(datas1, datas2):
     ydata2 = np.stack(ylist)
     ys2 = np.mean(ydata2, axis=0)
     ys2 = smooth(ys2)[:n]
-    ystd2 = np.std(ydata2, axis=0)
-    ax = plt.gca()
-    std_down2 = ys2-ystd2
-    std_down2 = smooth(std_down2)[:n]
-    std_up2 = ys2+ystd2
-    std_up2 = smooth(std_up2)[:n]
-    ax.fill_between(xs2, std_down2, std_up2, facecolor='orange', alpha=0.25)
+    # ystd2 = np.std(ydata2, axis=0)
+    # ax = plt.gca()
+    # std_down2 = ys2-ystd2
+    # std_down2 = smooth(std_down2)[:n]
+    # std_up2 = ys2+ystd2
+    # std_up2 = smooth(std_up2)[:n]
+    # ax.fill_between(xs2, std_down2, std_up2, facecolor='orange', alpha=0.25)
     plt.plot(xs2, ys2, color='orange', alpha=0.75, label=args.label2)
 
+    ax = plt.gca()
     ax.set_xlabel('Steps')
     ax.set_ylabel('Reward')
 
@@ -157,12 +153,12 @@ if __name__ == '__main__':
     basically load several monitor files and plot mean, variance
     """
     data1 = []
-    for i in range(1, 2):
+    for i in range(1, 10):
         datas1 = parse_file(os.path.join(args.load_path1, str(i)+'/0.monitor.json'))
         data1.append(datas1)
 
     data2 = []
-    for i in range(1, 2):
+    for i in range(1, 10):
         datas2 = parse_file(os.path.join(args.load_path2, str(i)+'/0.monitor.json'))
         data2.append(datas2)
 
